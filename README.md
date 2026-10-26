@@ -7,6 +7,10 @@
 
 **Locate Once, Check Until Settled.** Draft-and-verify referring-expression grounding for vision-language models.
 
+<p align="center">
+  <img src="assets/poster.png" width="560" alt="LOCUS poster: a box head drafts the box for 'right elephant' (IoU 0.87); the model's own coordinate tokens verify it in 4 steps instead of 19, correcting four digits (IoU 0.96). Acc@0.9 rises from 54.9 to 59.1 on the same weights; +4.52 Acc@0.9 over Jag-0.8B at equal size; 1.5x faster than vLLM decoding the same tokens.">
+</p>
+
 A VLM can ground an expression in two ways. It can write the box as coordinate tokens, which is precise but takes
 about 18.46 sequential decoding steps per box. Or it can regress the box from one hidden state with a small
 head, which takes one step but places edges less exactly. Locus uses the head as a speculative drafter for the model's
