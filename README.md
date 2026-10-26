@@ -121,6 +121,123 @@ Options:
 Training uses the RefCOCO, RefCOCO+ and RefCOCOg train splits with every image that appears in an evaluation split
 removed. Every run writes its config, seed and git commit to `results/`.
 
+## Train on your own data
+
+Training needs one CUDA GPU: about 48 GB for full fine-tuning at 2B, less at 0.8B or with LoRA.
+
+### 1. Write your data as JSONL
+
+One referring expression per line:
+
+```json
+{"image_id": "kitchen_0001", "path": "/data/images/kitchen_0001.jpg", "text": "the red mug left of the sink", "gt": [0.412, 0.530, 0.488, 0.641]}
+```
+
+| Field | Meaning |
+|---|---|
+| `image_id` | the same for every expression about one image (they share one image prefill); all strings or all integers |
+| `path` | image file; an absolute path is safest (relative paths resolve from the directory you launch in) |
+| `text` | the referring expression |
+| `gt` | box `[x0, y0, x1, y1]` as **fractions** of the image width and height, not pixels |
+
+From pixel boxes:
+
+```python
+import json
+from PIL import Image
+
+with open("data/my_train.jsonl", "w") as f:
+    for path, text, (x0, y0, x1, y1) in my_rows:          # your (image path, expression, pixel box) rows
+        w, h = Image.open(path).size
+        f.write(json.dumps(dict(image_id=path, path=path, text=text, gt=[x0 / w, y0 / h, x1 / w, y1 / h])) + "\n")
+```
+
+Write a held-out file the same way (`data/my_val.jsonl`) with images that are not in the training file.
+
+### 2. Train
+
+The recipe of the released models (head and verifier trained jointly, full fine-tuning of the language model and
+vision merger):
+
+```bash
+python scripts/train_box.py --backbone qwen3.5-0.8b --lora-r 0 --full-ft --lr-lora 1e-5 --head mlp \
+  --shared --bs 4 --q 4 --ar-weight 1.0 --steps 6000 \
+  --train-targets data/my_train.jsonl --target gt --eval-n 0 --final-splits --name my_locus_08b
+```
+
+- **Backbone.** `--backbone qwen3-vl-2b` for the 2B model; on a 48 GB GPU also pass `--fused-adam --accum 2`, as
+  `scripts/reproduce/locus_2b.sh` does.
+- **Steps.** One step is `--bs` images with up to `--q` expressions each, so epochs ≈ steps × bs × q / rows. The script
+  prints the epoch count at start and saves it in `results/box_train/<name>.json`. The released models train for
+  2 epochs.
+- **No RefCOCO needed.** `--eval-n 0` and an empty `--final-splits` skip the RefCOCO evaluations, so
+  `setup_data.py` is not needed. Leave both at their defaults after running `setup_data.py` to see how much
+  RefCOCO accuracy changes.
+- **Paths.** `--train-targets` is read relative to the repository root. The trained weights go to
+  `data/ckpt/<name>.pt`.
+- **Smaller GPU.** Replace `--lora-r 0 --full-ft --lr-lora 1e-5` with `--lora-r 64 --merger-lora`, and add
+  `--decision-items 0`. LoRA runs otherwise end with a retention probe whose script is not in this repository.
+
+### 3. Or fine-tune a released model
+
+Convert the Hub release into the checkpoint format `--init` reads (run from the repository root):
+
+```python
+from pathlib import Path
+
+import torch
+from huggingface_hub import snapshot_download
+from safetensors.torch import load_file
+
+sd = load_file(Path(snapshot_download("MTalha2001/LOCUS-0.8B")) / "model.safetensors")
+Path("data/ckpt").mkdir(parents=True, exist_ok=True)
+torch.save({"box_embed": sd["box_embed"],
+            "decoder": {k[len("decoder."):]: v for k, v in sd.items() if k.startswith("decoder.")},
+            "lora": {k[len("weights."):]: v for k, v in sd.items() if k.startswith("weights.")}},
+           "data/ckpt/locus_08b_release.pt")
+```
+
+Then run the step 2 command with `--init locus_08b_release` added. Keep the release's architecture flags:
+`--backbone qwen3.5-0.8b --lora-r 0 --full-ft --head mlp`, or `--backbone qwen3-vl-2b` for `MTalha2001/LOCUS-2B`.
+Starting from the release usually needs fewer steps than starting from the base VLM; check on your held-out file.
+
+### 4. Export, run and evaluate
+
+```bash
+python -m locus.hub export my_locus_08b exported/my_locus_08b
+```
+
+`from_pretrained("exported/my_locus_08b")` then loads it like a released model. `scripts/eval_draft_verify.py` only
+knows the RefCOCO splits, so score your held-out file directly:
+
+```python
+import json
+from collections import defaultdict
+
+import numpy as np
+from PIL import Image
+
+from locus.eval.grounding import iou_xyxy
+from locus.hub import from_pretrained, ground
+
+m = from_pretrained("exported/my_locus_08b")
+by_path = defaultdict(list)
+for line in open("data/my_val.jsonl"):
+    r = json.loads(line)
+    by_path[r["path"]].append(r)
+pred, gt = [], []
+for path, rows in by_path.items():
+    img = Image.open(path)
+    for r, out in zip(rows, ground(m, img, [r["text"] for r in rows])):  # one prefill per image
+        pred.append([v / s for v, s in zip(out["box"], [img.width, img.height] * 2)])
+        gt.append(r["gt"])
+iou = iou_xyxy(np.array(pred), np.array(gt))
+print({f"Acc@{t}": float((iou >= t).mean()) for t in (0.5, 0.75, 0.9)})
+```
+
+Pass `verify=False` to `ground` to score the one-pass head alone. Locus is trained at a 640² pixel budget (`--px`), and
+small targets suffer (see Limitations); if your objects are small, raise `--px` for training and export.
+
 ## Limitations
 
 - Trained on the RefCOCO family only. On Ref-L4's Objects365 images, whose targets are much smaller than any RefCOCO

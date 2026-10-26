@@ -194,8 +194,9 @@ def main():
     ap.add_argument("--exit-layer", type=float, default=1.0, help="run only this fraction of the LLM's layers")
     ap.add_argument("--n-query", type=int, default=1, help="[BOX] query tokens per question")
     ap.add_argument("--refine", action="store_true", help="box-conditioned iterative refinement + deep supervision")
-    ap.add_argument("--train-targets", default="", help="JSONL from gen_greedy_labels.py: train on its rows with "
-                    "--target as the box (drafter distillation)")
+    ap.add_argument("--train-targets", default="", help="JSONL, one expression per line: image_id, text, path (image "
+                    "file; omit for COCO train2017), and the box under --target as [x0, y0, x1, y1] fractions of the "
+                    "image size (custom data, or drafter distillation)")
     ap.add_argument("--target", default="greedy", choices=["greedy", "gt"], help="box column of --train-targets")
     ap.add_argument("--init", default="", help="start from this run's checkpoint (data/ckpt/<run>.pt)")
     ap.add_argument("--ar-weight", type=float, default=0.0, help="also train the adapter on coordinate tokens in a "
@@ -252,7 +253,8 @@ def main():
         for line in (REPO / args.train_targets).open():
             r = json.loads(line)
             if r[args.target] is not None:
-                e = refcoco.RefExpr(r["image_id"], 0, 0, r["text"], tuple(r[args.target]), r["ann_id"])
+                e = refcoco.RefExpr(r["image_id"], 0, 0, r["text"], tuple(r[args.target]), r.get("ann_id", -1),
+                                    r.get("path", ""))
                 exprs.append(e)
         res["train_targets"] = dict(file=args.train_targets, target=args.target)
     else:
@@ -260,8 +262,10 @@ def main():
     res["train_rows"], res["train_images"] = len(exprs), len({e.image_id for e in exprs})
     rows_per_step = args.bs * args.q if args.shared else args.bs  # shared: upper bound (images with < q expressions)
     res["epochs"] = args.steps * rows_per_step / len(exprs)
-    val_curve = [e for g in refcoco.sample_images(refcoco.load("refcoco", "validation"), 10_000, seed=1).values() for e in g]
-    val_curve = val_curve[: args.eval_n]
+    val_curve = []  # --eval-n 0: no RefCOCO curve, so custom data trains without RefCOCO on disk
+    if args.eval_n:
+        val_curve = [e for g in refcoco.sample_images(refcoco.load("refcoco", "validation"), 10_000, seed=1).values()
+                     for e in g][: args.eval_n]
     print(f"train rows {len(exprs)}  epochs {res['epochs']:.2f}  trainable {res['trainable_params_m']}", flush=True)
     save()
 
@@ -318,7 +322,7 @@ def main():
                     hist_ar = []
                 print(f"step {step} loss {l:.3f} train_acc50 {a:.3f} {(time.time() - t0) / step:.2f}s/step "
                       f"mem {torch.cuda.max_memory_allocated() / 1e9:.1f}GB", flush=True)
-            if step % args.eval_every == 0 or step == args.steps:
+            if val_curve and (step % args.eval_every == 0 or step == args.steps):
                 ev = evaluate(model, val_curve, shared=args.shared)
                 res["curve"].append(dict(step=step, train_loss=float(l), elapsed_h=(time.time() - t0) / 3600, **ev))
                 print("eval", res["curve"][-1], flush=True)
