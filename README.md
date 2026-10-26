@@ -1,5 +1,10 @@
 # Locus
 
+[![Project page](https://img.shields.io/badge/Project-Page-1f6fd1)](https://muhammad-talha-ad.github.io/LOCUS/)
+[![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b)](https://muhammad-talha-ad.github.io/LOCUS/static/locus.pdf)
+[![LOCUS-2B](https://img.shields.io/badge/%F0%9F%A4%97%20Model-LOCUS--2B-ffd21e)](https://huggingface.co/MTalha2001/LOCUS-2B)
+[![LOCUS-0.8B](https://img.shields.io/badge/%F0%9F%A4%97%20Model-LOCUS--0.8B-ffd21e)](https://huggingface.co/MTalha2001/LOCUS-0.8B)
+
 **Locate Once, Check Until Settled.** Draft-and-verify referring-expression grounding for vision-language models.
 
 A VLM can ground an expression in two ways. It can write the box as coordinate tokens, which is precise but takes
@@ -82,7 +87,7 @@ python scripts/setup_data.py   # RefCOCO/+/g annotations, COCO-2017 train images
 from PIL import Image
 from locus.hub import from_pretrained, ground
 
-m = from_pretrained("<org>/Locus-2B")   # trained weights from this repo; the base VLM from its own Hub repo
+m = from_pretrained("MTalha2001/LOCUS-2B")   # trained weights from this repo; the base VLM from its own Hub repo
 image = Image.open("street.jpg")
 for r in ground(m, image, ["the man in the red shirt", "the bus on the left"]):
     print(r["expression"], r["box"], r["passes"])

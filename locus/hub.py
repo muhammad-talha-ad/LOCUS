@@ -5,7 +5,7 @@ the LoRA or fully fine-tuned backbone weights (weights.<parameter name>). The ba
 (locus_config.json: base_model), so a LoRA release stays small.
 
     python -m locus.hub export <run> <out_dir>      # from results/box_train/<run>.json + data/ckpt/<run>.pt
-    m = from_pretrained("<user>/Locus-2B")           # or a local directory
+    m = from_pretrained("MTalha2001/LOCUS-2B")       # or a local directory
     ground(m, Image.open("cat.jpg"), ["the cat on the left"])  # -> one dict per expression (box in pixels)
 """
 from __future__ import annotations
