@@ -22,5 +22,8 @@ dependencies = [
   "pillow",
 ]
 
+[project.optional-dependencies]
+demo = ["gradio>=5"]
+
 [tool.setuptools.packages.find]
 include = ["locus*"]

@@ -112,6 +112,17 @@ Options:
 - `accept=0.7` or `0.5`: typical acceptance; fewer passes, no longer exactly greedy.
 - `verify=False`: return the head's draft only (one pass, fastest).
 
+## Gradio demo
+
+```bash
+pip install -e ".[demo]"
+python scripts/demo.py
+```
+
+Open http://127.0.0.1:7860, upload an image and enter one expression per line. Pick LOCUS-2B or LOCUS-0.8B (each
+is downloaded on first use) and exact, typical or head-only output; the page draws the boxes and lists each box's
+confidence and verifier passes. `GRADIO_SHARE=True python scripts/demo.py` also prints a public link.
+
 ## Reproduce
 
 | What | Command |
