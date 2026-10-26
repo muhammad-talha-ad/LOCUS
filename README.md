@@ -1,4 +1,4 @@
-# Locus
+# LOCUS
 
 [![Project page](https://img.shields.io/badge/Project-Page-1f6fd1)](https://muhammad-talha-ad.github.io/LOCUS/)
 [![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b)](https://muhammad-talha-ad.github.io/LOCUS/static/locus.pdf)
