@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "locus-vl"
+version = "0.1.0"
+description = "Locus: draft-and-verify visual grounding (a box head drafts, coordinate tokens verify)"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+  "torch>=2.10",
+  "torchvision>=0.25",
+  "transformers>=5.20",
+  "peft>=0.21",
+  "flash-linear-attention>=0.5.2",
+  "safetensors",
+  "huggingface_hub",
+  "numpy",
+  "pandas",
+  "pillow",
+]
+
+[tool.setuptools.packages.find]
+include = ["locus*"]
