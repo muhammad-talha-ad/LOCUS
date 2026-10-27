@@ -1,7 +1,7 @@
 # LOCUS
 
 [![Project page](https://img.shields.io/badge/Project-Page-1f6fd1)](https://muhammad-talha-ad.github.io/LOCUS/)
-[![Paper](https://img.shields.io/badge/Paper-PDF-b31b1b)](https://muhammad-talha-ad.github.io/LOCUS/static/locus.pdf)
+[![arXiv](https://img.shields.io/badge/arXiv-2610.35053-b31b1b)](https://arxiv.org/abs/2610.35053)
 [![LOCUS-2B](https://img.shields.io/badge/%F0%9F%A4%97%20Model-LOCUS--2B-ffd21e)](https://huggingface.co/MTalha2001/LOCUS-2B)
 [![LOCUS-0.8B](https://img.shields.io/badge/%F0%9F%A4%97%20Model-LOCUS--0.8B-ffd21e)](https://huggingface.co/MTalha2001/LOCUS-0.8B)
 
@@ -272,4 +272,15 @@ The box head follows [Jag](https://arxiv.org/abs/2610.13239); the backbones are 
 
 ## Citation
 
-Paper under review; citation to follow.
+```bibtex
+@misc{talha2026locus,
+  title         = {{LOCUS}: Locate Once, Check Until Settled. Draft-and-Verify Visual Grounding
+                   with a Box Head and Coordinate-Token Verification},
+  author        = {Talha, Muhammad},
+  year          = {2026},
+  eprint        = {2610.35053},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  url           = {https://arxiv.org/abs/2610.35053}
+}
+```
